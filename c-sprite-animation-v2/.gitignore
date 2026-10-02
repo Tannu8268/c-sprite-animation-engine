@@ -1,0 +1,39 @@
+# Compiled C files
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.dSYM/
+
+# Project executables and generated frames
+test_simple
+check_demo
+animate_client
+animate_server
+simple.dat
+
+# External, platform-specific dependency
+libanimate/
+libanimate-*.zip
+
+# Generated API documentation
+Doxyfile
+PointerProAnimateRefman.pdf
+latex/
+html/
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test and analysis output
+coverage/
+*.gcda
+*.gcno
+*.gcov
+compile_commands.json
