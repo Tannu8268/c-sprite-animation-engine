@@ -1,193 +1,170 @@
 # C Sprite Animation Engine
 
-A lightweight C library for creating, layering, and animating bitmap and geometric sprites on an ARGB canvas.
+A C11 sprite-animation project evolving from an in-process graphics engine into a signal-and-FIFO client–server system.
 
-![Example frame containing layered rectangles and a circle](assets/demo.png)
+> **Version 2 status:** `0.2.0-alpha` — the animation engine is usable, while the client–server communication layer is still under development.
 
-> The example frame is enlarged with nearest-neighbour scaling so the individual pixels remain visible.
+![Version 1 example frame containing layered rectangles and a circle](assets/demo.png)
 
 ## Overview
 
-This project implements a small 2D animation engine in C. It supports canvases, reusable sprites, sprite placement and layer ordering, basic physics-based movement, transparency, clipping, and raw frame generation.
+Version 1 implements the core animation engine: canvases, reusable sprites, layer ordering, transparency, clipping, physics-based movement, and raw ARGB32 frame generation.
 
-The project is also a practical demonstration of core C concepts such as dynamic memory management, opaque structures, file I/O, reference counting, doubly linked lists, pixel manipulation, and modular API design.
+Version 2 begins separating the application into client and server processes. The server links against a supplied `libanimate` static library and currently verifies the canvas lifecycle. Signal handling, FIFO creation, acknowledgement, and command exchange are planned but are not implemented in the attached v2 source yet.
 
-## Features
+## Version 2 status
 
-- Create a canvas with a configurable size and background colour.
-- Create rectangle and circle sprites in code.
-- Load 32-bit ARGB sprites from Bitmap V5 files.
-- Place the same sprite on a canvas more than once.
-- Move placements up, down, to the top, or to the bottom of the layer stack.
-- Animate sprites with velocity and acceleration.
-- Clip sprites that extend beyond the canvas boundaries.
-- Treat pixels with an alpha value of zero as transparent.
-- Prevent a sprite from being destroyed while it is still placed on a canvas.
-- Generate each animation frame as a raw ARGB32 pixel buffer.
+| Component | Status |
+| --- | --- |
+| Core canvas and sprite engine | Implemented |
+| Basic and shapes examples | Implemented |
+| Standalone client executable | Builds; communication logic pending |
+| Server executable | Canvas smoke test implemented |
+| External `libanimate` integration | Makefile target provided |
+| Signal-based connection request | Planned |
+| FIFO creation and cleanup | Planned |
+| Server acknowledgement signal | Planned |
+| Client/server command protocol | Planned |
 
-## How the animation works
+## Intended architecture
 
-For a requested frame, the engine calculates time as:
+The comments in the v2 files describe the following intended flow:
 
-```text
-t = frame_number / frame_rate
+```mermaid
+flowchart LR
+    C["Animation client"] -->|"connection signal"| S["Animation server"]
+    S -->|"creates"| F["Named FIFO"]
+    S -->|"acknowledgement signal"| C
+    C <-->|"future commands and responses"| F
+    S --> L["libanimate"]
 ```
 
-It then calculates the sprite position independently on each axis:
+This diagram describes the planned architecture, not completed runtime behaviour.
 
-```text
-position = initial_position + velocity * t + 0.5 * acceleration * t^2
-```
+## Existing engine features
 
-Placements are rendered from the bottom layer to the top layer, so later layers overwrite earlier ones wherever their non-transparent pixels overlap.
+- Configurable ARGB canvas creation.
+- Rectangle and filled-circle sprites.
+- Compatible 32-bit ARGB Bitmap V5 sprite loading.
+- Reusable sprites with multiple placements.
+- Doubly linked layer ordering.
+- Velocity- and acceleration-based movement.
+- Canvas-boundary clipping and transparent pixels.
+- Sprite reference-count protection.
+- Raw ARGB32 frame generation.
 
 ## Project structure
 
 | Path | Purpose |
 | --- | --- |
-| `animate.h` | Public types, helper functions, and animation API declarations. |
-| `animate.c` | Canvas, sprite, placement, layering, animation, and frame-generation implementation. |
-| `main_simple.c` | Minimal example that creates two overlapping rectangles. |
-| `check.c` | Extended example using rectangles and a circle. |
-| `Makefile` | Build, run, and cleanup commands. |
-| `assets/demo.png` | Enlarged preview generated from the extended example. |
-| `CHANGELOG.md` | Version history and planned changes. |
-| `CONTRIBUTING.md` | Guidelines for proposing changes. |
-
-Generated object files, executables, raw frames, and documentation output are excluded through `.gitignore`.
+| `animate.c` | Version 1 animation-engine implementation. |
+| `animate.h` | Version 1 public animation API. |
+| `animate_client.c` | Version 2 client entry point; IPC logic is pending. |
+| `animate_server.c` | Version 2 server entry point and `libanimate` smoke test. |
+| `main_simple.c` | Basic rectangle example. |
+| `check.c` | Extended rectangle-and-circle example. |
+| `Makefile` | Engine, demo, client, and server build targets. |
+| `docs/ARCHITECTURE.md` | Current and planned client–server design. |
+| `assets/demo.png` | Enlarged preview generated by the shapes example. |
+| `CHANGELOG.md` | Version history. |
+| `CONTRIBUTING.md` | Contribution and testing guidance. |
 
 ## Requirements
 
-- A C11-compatible compiler such as Clang or GCC
+For the engine examples and client:
+
+- A C11-compatible compiler such as GCC or Clang
 - `make`
 
-The project has no external runtime dependencies.
+For the supplied v2 server dependency:
 
-## Build and run
+- The provided `libanimate-aarch64.zip`
+- 64-bit ARM Linux (`aarch64`)
+- `unzip`
 
-Clone the repository and enter its directory:
+The supplied archive contains an **ELF AArch64** static library. It will not link on x86-64 Linux or macOS, including Apple Silicon macOS. A compatible build of `libanimate` is required on other platforms.
 
-```bash
-git clone https://github.com/YOUR_USERNAME/c-sprite-animation-engine.git
-cd c-sprite-animation-engine
-```
+## Build the portable targets
 
-Build the basic example:
+Build the v1 examples and the v2 client:
 
 ```bash
 make
 ```
 
-Run it:
+Run the examples:
 
 ```bash
 make run
-```
-
-This creates `simple.dat`, a `10 x 10` raw ARGB32 frame containing `400` bytes.
-
-To build and run the extended shapes example:
-
-```bash
-make check_demo
 make run-shapes
 ```
 
-The extended example replaces `simple.dat` with a `20 x 20` frame containing `1600` bytes.
+Each example writes a raw frame to `simple.dat`.
 
-Remove generated files with:
+## Build the v2 server
+
+The precompiled dependency is deliberately not committed to the repository. Extract the supplied archive in the project root so the following paths exist:
+
+```text
+libanimate/include/animate/animate.h
+libanimate/lib/libanimate.a
+libanimate/doc/PointerProAnimateRefman.pdf
+```
+
+Then, on compatible 64-bit ARM Linux:
 
 ```bash
-make clean
+make server
+./animate_server
 ```
 
-## Use the library in another C program
-
-Include the public header, create a canvas and sprite, place the sprite, and ask the engine to generate a frame:
-
-```c
-#include "animate.h"
-#include <stdlib.h>
-
-int main(void) {
-    struct canvas *canvas = animate_create_canvas(
-        100,
-        160,
-        animate_color_argb(255, 20, 20, 20)
-    );
-
-    struct sprite *circle = animate_create_circle(
-        8,
-        animate_color_argb(255, 255, 80, 80),
-        true
-    );
-
-    struct sprite_placement *placement =
-        animate_place_sprite(canvas, circle, 10, 20);
-
-    animate_set_animation_params(placement, 30, 0, 0, 10);
-
-    size_t frame_size = animate_frame_size_bytes(canvas);
-    void *frame = malloc(frame_size);
-    animate_generate_frame(canvas, 30, 30, frame);
-
-    free(frame);
-    animate_destroy_canvas(canvas);
-    animate_destroy_sprite(circle);
-    return 0;
-}
-```
-
-Compile your program together with the library implementation:
+To use a compatible dependency stored elsewhere:
 
 ```bash
-cc -std=c11 your_program.c animate.c -o your_program
+make server LIBANIMATE_DIR=/path/to/libanimate
 ```
 
-## Main API
+## Useful Make targets
 
-| Function group | Important functions |
+| Command | Result |
 | --- | --- |
-| Canvas lifecycle | `animate_create_canvas`, `animate_destroy_canvas` |
-| Sprite lifecycle | `animate_create_sprite`, `animate_create_rectangle`, `animate_create_circle`, `animate_destroy_sprite` |
-| Placement lifecycle | `animate_place_sprite`, `animate_destroy_placement` |
-| Layer ordering | `animate_placement_up`, `animate_placement_down`, `animate_placement_top`, `animate_placement_bottom` |
-| Motion | `animate_set_animation_params` |
-| Frame output | `animate_frame_size_bytes`, `animate_generate_frame` |
-| Colour helpers | `animate_color_rgb`, `animate_color_argb` |
+| `make` | Builds both engine examples and the v2 client. |
+| `make engine` | Builds `animate.o`. |
+| `make demos` | Builds `test_simple` and `check_demo`. |
+| `make client` | Builds `animate_client`. |
+| `make server` | Builds `animate_server` using external `libanimate`. |
+| `make run` | Runs the basic engine example. |
+| `make run-shapes` | Runs the extended shapes example. |
+| `make clean` | Removes generated objects, executables, and frame data. |
 
-See the documentation comments in `animate.h` for parameter and ownership details.
+## Engine output format
 
-## Output format
-
-`animate_generate_frame` writes one packed `color_t` value per pixel to a caller-provided buffer. A `color_t` is a 32-bit unsigned integer in `0xAARRGGBB` form.
-
-The example programs write this memory directly to `simple.dat`. This is raw pixel data rather than a PNG, JPEG, or video file, so a viewer must be given the frame width, height, and ARGB32 layout.
+`animate_generate_frame` writes packed 32-bit `color_t` pixels in `0xAARRGGBB` form. The examples write this memory directly to `simple.dat`; it is raw pixel data rather than an encoded PNG or video.
 
 ## Current limitations
 
-- Frame export is raw ARGB32 data; encoded image and video output are not included yet.
-- The custom animation callback function is declared but is currently a placeholder.
-- Circle sprites currently support the filled form only.
-- Bitmap loading expects a compatible 32-bit ARGB Bitmap V5 file and performs limited format validation.
-- The engine replaces pixels based on transparency; partial alpha blending is not implemented.
+- The v2 client has no connection or command logic yet.
+- The v2 server does not yet install signal handlers or create FIFOs.
+- No client/server message format has been defined.
+- The supplied server library is platform-specific.
+- Encoded image/video output and partial alpha blending are not available.
+- The custom animation callback in the local v1 engine remains a placeholder.
 
 ## Roadmap
 
-- Implement custom animation callbacks.
-- Add stricter validation and error handling for bitmap input.
-- Add PNG or video export helpers.
-- Add automated unit tests and memory-safety checks.
-- Add alpha blending and more primitive shapes.
+1. Define the connection signals and client/server lifecycle.
+2. Create a unique FIFO safely for each client.
+3. Add acknowledgement, timeout, and interruption handling.
+4. Define and validate a command protocol.
+5. Add integration tests covering multiple clients and cleanup.
+6. Add portable dependency builds or source-based linking.
+
+More design notes are available in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Contributing
 
-Suggestions, bug reports, and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a change.
-
-## Version
-
-This repository contains version `0.1.0`, the first public project version. See [CHANGELOG.md](CHANGELOG.md) for details.
+Bug reports and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting changes. Please distinguish implemented behaviour from planned behaviour in documentation and pull requests.
 
 ## License
 
-No open-source license has been selected for version `0.1.0`. Please contact the repository owner before copying, modifying, or redistributing the code.
+No open-source license has been selected. Confirm that all collaborators and any provider of starter code or precompiled libraries permit public distribution before publishing the repository.

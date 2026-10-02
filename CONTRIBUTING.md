@@ -17,11 +17,11 @@ Thank you for helping improve the C Sprite Animation Engine.
    git switch -c feature/short-description
    ```
 
-3. Build both examples:
+3. Build the portable targets:
 
    ```bash
    make clean
-   make demos
+   make
    ```
 
 4. Run both examples:
@@ -31,8 +31,14 @@ Thank you for helping improve the C Sprite Animation Engine.
    make run-shapes
    ```
 
-5. Commit the change with a clear message.
-6. Open a pull request and explain what changed, why it changed, and how it was tested.
+5. If you have a compatible external `libanimate` build, compile the server:
+
+   ```bash
+   make server
+   ```
+
+6. Commit the change with a clear message.
+7. Open a pull request and explain what changed, why it changed, and how it was tested.
 
 ## Code guidelines
 
@@ -41,6 +47,8 @@ Thank you for helping improve the C Sprite Animation Engine.
 - Release every successfully allocated resource along all error paths.
 - Preserve the meaning of `canvas->bottom` and `canvas->top` when changing placement logic.
 - Keep generated files and platform-specific build products out of commits.
+- Keep signal handlers limited to async-signal-safe operations.
+- Document the client/server message format before adding protocol commands.
 - Prefer small, readable functions and descriptive names.
 
 ## Pull-request checklist
@@ -48,6 +56,8 @@ Thank you for helping improve the C Sprite Animation Engine.
 - [ ] The project builds with a C11 compiler.
 - [ ] `make demos` completes successfully.
 - [ ] Both example programs run successfully.
+- [ ] The client builds successfully.
+- [ ] Server changes were tested with a compatible `libanimate` build, or the platform limitation is stated.
 - [ ] New public behavior is documented.
 - [ ] Memory ownership remains clear.
 - [ ] Generated binaries and `.o` files are not committed.

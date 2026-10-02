@@ -9,7 +9,13 @@
 # Project executables and generated frames
 test_simple
 check_demo
+animate_client
+animate_server
 simple.dat
+
+# External, platform-specific dependency
+libanimate/
+libanimate-*.zip
 
 # Generated API documentation
 Doxyfile
